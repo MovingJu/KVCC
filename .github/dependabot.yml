@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Keeps bot commits and PR titles valid: "ci(deps): Bump ..."
+    commit-message:
+      prefix: ci
+      include: scope

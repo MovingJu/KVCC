@@ -10,4 +10,9 @@ endif()
 
 add_compile_options(-Wall -Wextra)
 
-add_executable(kvcc src/main.c)
+add_executable(kvcc
+  src/main.c
+  src/server.c
+  src/client.c
+)
+target_include_directories(kvcc PRIVATE include)

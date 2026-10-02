@@ -1,35 +1,45 @@
-# gh_template
+# KVCC
 
-Template repository that enforces **commit, PR and issue conventions** with plain GitHub features and two well-known actions. No code to maintain, nothing to install in your project.
+A tiny Redis-like key-value cache server written in pure C, built as a staged
+learning project: start with a blocking single-client echo loop, work up to
+an `epoll`-based multi-client reactor, then swap the I/O layer for `io_uring`
+and benchmark the difference directly.
 
-## Use it
+## Protocol
 
-1. Click **Use this template**.
-2. Apply the settings GitHub does not copy from templates (needs the [GitHub CLI](https://cli.github.com/) and admin rights):
+Simple text protocol, testable with `nc`:
 
-   ```sh
-   .github/bootstrap.sh
-   ```
+```
+SET key value\r\n   -> +OK\r\n
+GET key\r\n          -> $value\r\n   or  $-1\r\n (missing)
+DEL key\r\n          -> :1\r\n / :0\r\n
+PING\r\n             -> +PONG\r\n
+STATS\r\n            -> connection count / ops-per-second / hit rate
+```
 
-Rulesets on private repositories need a paid GitHub plan; public repositories are free.
+## Roadmap
 
-## What you get
-
-| | |
+| Stage | What |
 |---|---|
-| Commit messages | [Conventional Commits](https://www.conventionalcommits.org/), checked in every PR by [commitlint](https://github.com/wagoid/commitlint-github-action) (`.github/commitlint.config.json`) |
-| PR title | Same format, checked by [action-semantic-pull-request](https://github.com/amannn/action-semantic-pull-request) |
-| Merging | Both checks are required; squash only, so the PR title becomes the commit (`.github/rulesets/main.json`) |
-| Issues | Bug and feature forms with a pre-filled `fix: ` / `feat: ` title; blank issues disabled |
-| PR description | `PULL_REQUEST_TEMPLATE.md` (guidance only) |
+| M0 | Blocking socket, one client at a time (echo only) |
+| M1 | Real hash table wired in: SET/GET/DEL/PING |
+| M2 | `epoll`-based multi-client reactor (single thread, non-blocking) — the baseline |
+| M3 | Benchmark client (ops/sec, p50/p99 latency) |
+| M4 | Same protocol + hash table, I/O loop rewritten with `io_uring` — re-run M3's benchmark and compare |
+| M5 | `SO_REUSEPORT` + sharded/lock-free hash table across multiple reactor threads |
+| M6 | XDP/eBPF connection-rate prefilter |
+| M7 | Real RESP compatibility so `redis-cli`/`redis-benchmark` can talk to it |
 
-The subject can be in any language; only the `type(scope): subject` structure is checked. Issues cannot be blocked at creation, so the forms are guidance.
+Currently at **M0**.
 
-## Good to know
+## Build
 
-- The ruleset requires 0 approvals so a solo maintainer can merge. Raise `required_approving_review_count` for teams, then re-run `.github/bootstrap.sh`.
-- Required check names must match the job names (`PR title`, `Commit messages`).
-- Don't add `paths` filters to these workflows: a skipped workflow leaves a required check pending forever.
-- Actions are pinned to SHAs and Dependabot keeps them updated, using a `ci(deps)` prefix so its PRs pass the checks.
+```sh
+cmake -S . -B build
+cmake --build build
+./build/kvcc
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the convention.
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for commit/PR conventions.
